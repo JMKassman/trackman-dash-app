@@ -33,4 +33,6 @@ COPY --from=builder --chown=app:app /app /app
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
+WORKDIR /app
+
 CMD ["waitress-serve", "app:app.server"]
