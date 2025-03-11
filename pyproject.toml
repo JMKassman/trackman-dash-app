@@ -1,0 +1,13 @@
+[project]
+name = "golf-analysis"
+version = "0.1.0"
+description = "A simple dash app to analyze trackman data"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dash>=2.18.2",
+    "pandas>=2.2.3",
+    "plotly>=6.0.0",
+    "statsmodels>=0.14.4",
+    "waitress>=3.0.2",
+]
