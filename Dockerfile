@@ -25,6 +25,8 @@ FROM python:3.12-slim-bookworm
 # Python executable must be the same, e.g., using `python:3.11-slim-bookworm`
 # will fail.
 
+LABEL org.opencontainers.image.source https://github.com/JMKassman/trackman-dash-app
+
 # Copy the application from the builder
 COPY --from=builder --chown=app:app /app /app
 
