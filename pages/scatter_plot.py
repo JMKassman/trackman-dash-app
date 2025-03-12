@@ -6,23 +6,43 @@ import pandas as pd
 import plotly.express as px
 import numpy as np
 
+from utils.logger import get_child_logger
+
+logger = get_child_logger(__name__)
 
 dash.register_page(__name__)
 
-layout = [
-    html.H1("Scatter Plot"),
-    html.Label("Select Column for X Axis:", htmlFor="scatter-x-column-selector"),
-    dcc.Dropdown(id="scatter-x-column-selector"),
-    html.Label("Select Column for Y Axis:", htmlFor="scatter-y-column-selector"),
-    dcc.Dropdown(id="scatter-y-column-selector"),
-    html.Label("Choose Grouping (optional):", htmlFor="scatter-color-selector"),
-    dcc.Dropdown(id="scatter-color-selector"),
-    html.Label("Choose Filter Column (optional):", htmlFor="scatter-filter-selector"),
-    dcc.Dropdown(id="scatter-filter-selector"),
-    html.Div(id="scatter-filter"),
-    dcc.Graph(id="scatter-plot"),
-    html.Div(id="trendline-stats"),
-]
+layout = html.Div(
+    [
+        html.H1("Scatter Plot", className="page-title"),
+        html.Div(
+            [
+                html.Label(
+                    "Select Column for X Axis:", htmlFor="scatter-x-column-selector"
+                ),
+                dcc.Dropdown(id="scatter-x-column-selector"),
+                html.Label(
+                    "Select Column for Y Axis:", htmlFor="scatter-y-column-selector"
+                ),
+                dcc.Dropdown(id="scatter-y-column-selector"),
+                html.Label(
+                    "Choose Grouping (optional):", htmlFor="scatter-color-selector"
+                ),
+                dcc.Dropdown(id="scatter-color-selector"),
+                html.Label(
+                    "Choose Filter Column (optional):",
+                    htmlFor="scatter-filter-selector",
+                ),
+                dcc.Dropdown(id="scatter-filter-selector"),
+                html.Div(id="scatter-filter"),
+                dcc.Graph(id="scatter-plot"),
+                html.Div(id="trendline-stats", className="ols-results"),
+            ],
+            className="scatter-plot-container",
+        ),
+    ],
+    className="page-content",
+)
 
 
 @callback(
@@ -119,9 +139,10 @@ def create_graph(
     else:
         fig = px.scatter(df, x=x_col, y=y_col, trendline="ols")
     results: pd.DataFrame = px.get_trendline_results(fig)
-    if results and len(results.columns) > 1:
+    logger.debug(results)
+    if results is not None and len(results.columns) > 1:
         results = results.set_index(list(set(results.columns) - {"px_fit_results"}))
-    elif results:
+    elif results is not None:
         results.index = ["ALL"]
     else:
         # ols failed most likely due to lack of data
@@ -132,12 +153,7 @@ def create_graph(
         summaries.append(
             html.Pre(
                 children=result.summary().as_text(),
-                style={
-                    "whiteSpace": "pre-wrap",
-                    "background-color": "lightgray",
-                    "display": "inline-block",
-                    "padding": "1em",
-                },
+                className="pre-styling",
             )
         )
     return fig, [html.H2("Trendline statistics"), *summaries]

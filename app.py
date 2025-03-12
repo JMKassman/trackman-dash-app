@@ -1,5 +1,6 @@
 import base64
 import io
+import logging
 import re
 import csv
 
@@ -8,10 +9,15 @@ from dash import Dash, Input, Output, State, dcc, html
 from dash.exceptions import PreventUpdate
 import dash
 
-app = Dash(use_pages=True)
+from utils.logger import get_child_logger, set_parent_log_level
+
+logger = get_child_logger(__name__)
+
+app = Dash(use_pages=True, external_stylesheets=["/assets/styles.css"])
 
 app.layout = html.Div(
     [
+        dcc.Location(id="url", refresh=False),
         dcc.Store(id="data", storage_type="session"),
         html.Div(id="error"),
         dcc.Upload(
@@ -28,19 +34,28 @@ app.layout = html.Div(
             },
             multiple=False,
         ),
-        html.Div(
-            [
-                html.Div(
-                    dcc.Link(
-                        f"{page['name']} - {page['path']}", href=page["relative_path"]
-                    )
-                )
-                for page in dash.page_registry.values()
-            ]
-        ),
+        html.Ul(id="tabs", className="tabs"),
         dash.page_container,
     ]
 )
+
+
+@app.callback(
+    Output("tabs", "children"),
+    Input("url", "pathname"),
+)
+def update_active_tab(pathname):
+    return [
+        html.Li(
+            dcc.Link(
+                f"{page['name']}",
+                href=page["relative_path"],
+                className="active" if page["relative_path"] == pathname else "",
+            ),
+            className="tab",
+        )
+        for page in dash.page_registry.values()
+    ]
 
 
 @app.callback(
@@ -57,9 +72,11 @@ def update_data(content: str | None, name: str | None):
     decoded = base64.b64decode(content_string).decode("utf-8")
     try:
         if name.endswith(".csv"):
+            logger.debug("Reading csv")
             if match := re.match(r"sep=(.)", decoded.splitlines()[0]):
                 # This is a csv exported directly from trackman
                 sep = match.group(1)
+                logger.debug("Reading trackman csv with sep %s", sep)
                 df = pd.read_csv(
                     io.StringIO(decoded),
                     sep=sep,
@@ -68,30 +85,35 @@ def update_data(content: str | None, name: str | None):
                     quoting=csv.QUOTE_ALL,
                     header=[0, 1],
                 )
-                print(df.columns)
+                logger.debug("original columns:")
+                logger.debug(df.columns)
                 # Combine headers and units, ignoring empty units
                 df.columns = [
                     f"{col[0]} {col[1]}" if "Unnamed" not in col[1] else col[0]
                     for col in df.columns.values
                 ]
-                print(df.columns)
+                logger.debug("new columns:")
+                logger.debug(df.columns)
             else:
                 # Assume the csv is normal with no sep row to start and no units row
+                logger.debug("Reading normal csv")
                 df = pd.read_csv(io.StringIO(decoded))
         else:
+            logger.debug("Uploaded file is not a csv. File name: %s", name)
             return (
                 html.Div(["Please upload a csv"]),
                 None,
                 html.Div(["Drag and Drop or ", html.A("Select File")]),
             )
     except Exception as e:
-        print(e)
+        logger.error("Failed to read file")
+        logger.exception(e)
         return (
             html.Div(["There was an error processing this file."]),
             None,
             html.Div(["Drag and Drop or ", html.A("Select File")]),
         )
-    print(df)
+    logger.debug(df)
     return (
         None,
         df.to_dict("records"),
@@ -106,4 +128,5 @@ def update_data(content: str | None, name: str | None):
 
 
 if __name__ == "__main__":
+    set_parent_log_level(logging.DEBUG)
     app.run(debug=True)

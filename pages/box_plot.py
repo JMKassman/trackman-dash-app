@@ -7,22 +7,33 @@ import plotly.express as px
 import numpy as np
 from statsmodels.formula.api import ols
 
-
 dash.register_page(__name__)
 
-layout = [
-    html.H1("Box Plot"),
-    html.Label("Select Column for Box Plot:", htmlFor="box-column-selector"),
-    dcc.Dropdown(id="box-column-selector"),
-    html.Label("Choose Grouping (optional):", htmlFor="box-color-selector"),
-    dcc.Dropdown(id="box-color-selector"),
-    html.Label("Choose Filter Column (optional):", htmlFor="box-filter-selector"),
-    dcc.Dropdown(id="box-filter-selector"),
-    html.Div(id="box-filter"),
-    dcc.Graph(id="box-plot"),
-    html.Button(id="ols-button", children="Run OLS"),
-    html.Div(id="ols-results"),
-]
+layout = html.Div(
+    [
+        html.H1("Box Plot", className="page-title"),
+        html.Div(
+            [
+                html.Label(
+                    "Select Column for Box Plot:", htmlFor="box-column-selector"
+                ),
+                dcc.Dropdown(id="box-column-selector"),
+                html.Label("Choose Grouping (optional):", htmlFor="box-color-selector"),
+                dcc.Dropdown(id="box-color-selector"),
+                html.Label(
+                    "Choose Filter Column (optional):", htmlFor="box-filter-selector"
+                ),
+                dcc.Dropdown(id="box-filter-selector"),
+                html.Div(id="box-filter"),
+                dcc.Graph(id="box-plot"),
+                html.Button(id="ols-button", children="Run OLS", className="button"),
+                html.Div(id="ols-results", className="ols-results"),
+            ],
+            className="box-plot-container",
+        ),
+    ],
+    className="page-content",
+)
 
 
 @callback(
@@ -133,10 +144,5 @@ def run_ols(
     model = ols(f"{data_col} ~ {grouping_col}", df).fit()
     return html.Pre(
         children=model.summary().as_text(),
-        style={
-            "whiteSpace": "pre-wrap",
-            "background-color": "lightgray",
-            "display": "inline-block",
-            "padding": "1em",
-        },
+        className="pre-styling",
     )
